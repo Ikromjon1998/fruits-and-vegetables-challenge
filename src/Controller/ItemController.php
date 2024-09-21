@@ -2,130 +2,128 @@
 
 namespace App\Controller;
 
-use App\Entity\Item;
+use App\DTO\ItemData;
 use App\Service\ItemCollection;
-use OpenApi\Annotations as OA;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-/**
- * Class ItemController
- * @package App\Controller
- * @param Request $request
- * @param SerializerInterface $serializer
- * @param int $id
- * @param string $type
- *
- * @return JsonResponse
- */
 class ItemController extends AbstractController
 {
-    public function __construct(private ItemCollection $itemCollection, private SerializerInterface $serializer)
-    {
+    public function __construct(
+        private ItemCollection $itemCollection,
+        private SerializerInterface $serializer,
+        private ValidatorInterface $validator,
+    ) {
     }
 
     /**
      * @Route("/api/items", name="add_item", methods={"POST"})
-     *
-     * @param Request $request
-     * @return JsonResponse
-     * @throws \Exception
      */
     public function addItem(Request $request): JsonResponse
     {
-        // validate the request
-        $this->validateCreateAndUpdateRequest($request);
+        $itemData = $this->standardItem($request);
+        $errors = $this->validator->validate($itemData);
 
-        $data = json_decode($request->getContent(), true);
-        $item = $this->itemCollection->add($data);
+        if (count($errors) > 0) {
+            $errorsString = (string) $errors;
 
-        $jsonItem = $this->serializer->serialize($item, 'json');
+            return $this->createErrorResponse($errorsString, Response::HTTP_BAD_REQUEST);
+        }
 
-        return new JsonResponse($jsonItem, Response::HTTP_CREATED, [], true);
+        $item = $this->itemCollection->add($itemData);
+
+        return $this->createJsonResponse($item, Response::HTTP_CREATED);
     }
 
     /**
-     * @Route("/api/items/{type}", name="list_items", methods={"GET"})
-     *
-     * @param Request $request
-     * @param string $type
-     * @return JsonResponse
+     * @Route("/api/items", name="list_items", methods={"GET"})
      */
-    public function listItems(Request $request, string $type): JsonResponse
+    public function listItems(Request $request): JsonResponse
     {
-        // Get the sort parameter from the request
-        $orderBy = $request->query->get('orderBy');
+        try {
+            $type = $request->query->get('type', null);
+            $search = $request->query->get('search', '');
+            $orderBy = $request->query->get('orderBy');
 
-        $items = $this->itemCollection->list($type, $orderBy);
+            $items = $this->itemCollection->list($type, $search, $orderBy);
 
-        $json = $this->serializer->serialize($items, 'json');
-
-        return new JsonResponse($json, 200, [], true);
+            return $this->createJsonResponse($items, Response::HTTP_OK);
+        } catch (NotFoundHttpException $e) {
+            return $this->createErrorResponse($e->getMessage(), Response::HTTP_NOT_FOUND);
+        }
     }
 
     /**
      * @Route("/api/items/{id}", name="update_item", methods={"PUT"})
-     *
-     * @param Request $request
-     * @param int $id
-     * @return JsonResponse
-     * @throws \Exception
      */
     public function updateItem(Request $request, int $id): JsonResponse
     {
-        // validate the request
-        $this->itemCollection->toValidateId($id);
-        $this->validateCreateAndUpdateRequest($request);
+        $itemData = $this->standardItem($request);
+        $errors = $this->validator->validate($itemData);
 
-        $data = json_decode($request->getContent(), true);
-        $item = $this->itemCollection->update($id, $data);
+        if (count($errors) > 0) {
+            $errorsString = (string) $errors;
 
-        $jsonItem = $this->serializer->serialize($item, 'json');
+            return $this->createErrorResponse($errorsString, Response::HTTP_BAD_REQUEST);
+        }
 
-        return new JsonResponse($jsonItem, Response::HTTP_OK, [], true);
+        $item = $this->itemCollection->update($id, $itemData);
+
+        return $this->createJsonResponse($item, Response::HTTP_OK);
     }
 
     /**
      * @Route("/api/items/{id}", name="remove_item", methods={"DELETE"})
-     *
-     * @param int $id
-     *
-     * @return JsonResponse
-     * @throws \Exception
      */
     public function removeItem(int $id): JsonResponse
     {
-        // validate the request
-        $this->itemCollection->toValidateId($id);
-        $this->itemCollection->remove($id);
-        return new JsonResponse('Item removed', Response::HTTP_NO_CONTENT, [], false);
+        try {
+            // Validate ID
+            $this->itemCollection->toValidateId($id);
+            $this->itemCollection->remove($id);
+
+            return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+        } catch (\Exception $e) {
+            return $this->createErrorResponse($e->getMessage(), Response::HTTP_BAD_REQUEST);
+        }
     }
 
     /**
-     * @Route("/api/items/search/{name}", name="search_items", methods={"GET"})
-     *
-     * @param string $name
-     * @return JsonResponse
+     * Helper method to create a consistent JSON response.
      */
-    public function searchItems(string $name): JsonResponse
+    private function createJsonResponse($data, int $statusCode = Response::HTTP_OK): JsonResponse
     {
-        $items = $this->itemCollection->search($name);
+        $jsonData = $this->serializer->serialize($data, 'json');
 
-        $json = $this->serializer->serialize($items, 'json');
-
-        return new JsonResponse($json, 200, [], true);
+        return new JsonResponse($jsonData, $statusCode, [], true);
     }
 
-    private function validateCreateAndUpdateRequest(Request $request): void
+    /**
+     * Helper method to create standardized error responses.
+     */
+    private function createErrorResponse(string $message, int $statusCode): JsonResponse
+    {
+        return new JsonResponse(['error' => $message], $statusCode);
+    }
+
+    /**
+     * Helper method to create standardized ItemData validation rules.
+     */
+    private function standardItem(Request $request): ItemData
     {
         $data = json_decode($request->getContent(), true);
+        $itemData = new ItemData();
+        $itemData->name = $data['name'];
+        $itemData->type = $data['type'];
+        $itemData->quantity = $data['quantity'];
+        $itemData->unit = $data['unit'];
 
-        if (!isset($data['name']) || !isset($data['type']) || !isset($data['quantity']) || !isset($data['unit'])) {
-            throw new \Exception('Invalid request data');
-        }
+        return $itemData;
     }
 }
