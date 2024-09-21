@@ -100,4 +100,11 @@ class ItemCollection
             throw new \Exception('Item not found');
         }
     }
+
+    public function itemWithNameIsExist(string $name): bool
+    {
+        $item = $this->itemRepository->findOneBy(['name' => $name]);
+
+        return null !== $item;
+    }
 }

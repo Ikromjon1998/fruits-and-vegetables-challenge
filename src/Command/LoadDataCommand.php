@@ -2,12 +2,11 @@
 
 namespace App\Command;
 
+use App\DTO\ItemData;
 use App\Service\ItemCollection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 #[AsCommand(
@@ -25,10 +24,6 @@ class LoadDataCommand extends Command
 
     protected function configure(): void
     {
-        $this
-            ->addArgument('arg1', InputArgument::OPTIONAL, 'Argument description')
-            ->addOption('option1', null, InputOption::VALUE_NONE, 'Option description')
-        ;
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -38,7 +33,17 @@ class LoadDataCommand extends Command
         $items = json_decode($json, true);
 
         foreach ($items as $item) {
-            $this->itemCollection->add($item);
+            // create new ItemData object
+            $itemToAdd = new ItemData();
+            $itemToAdd->name = $item['name'];
+            $itemToAdd->type = $item['type'];
+            $itemToAdd->quantity = $item['quantity'];
+            $itemToAdd->unit = $item['unit'];
+
+            // add the item to the database if this name is not exist
+            if (!$this->itemCollection->itemWithNameIsExist($itemToAdd->name)) {
+                $this->itemCollection->add($itemToAdd);
+            }
         }
 
         return Command::SUCCESS;
