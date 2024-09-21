@@ -2,8 +2,11 @@
 
 namespace App\Entity;
 
+use App\Config\ItemType;
+use App\Config\ItemUnit;
 use App\Repository\ItemRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ItemRepository::class)]
 class Item
@@ -14,16 +17,22 @@ class Item
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    private ?string $name = null;
+    #[Assert\NotBlank]
+    private string $name;
 
+    // type is ItemType enumerator
     #[ORM\Column(length: 255)]
-    private ?string $type = null;
+    #[Assert\Choice(choices: ItemType::VALUES, message: 'Choose a valid item type.')]
+    private string $type;
 
     #[ORM\Column]
-    private ?int $quantity = null;
+    #[Assert\NotNull]
+    #[Assert\NotBlank]
+    private ?int $quantity = 0;
 
     #[ORM\Column(length: 255)]
-    private ?string $unit = null;
+    #[Assert\Choice(choices: ItemUnit::VALUES, message: 'Choose a valid item unit.')]
+    private ?string $unit = 'g';
 
     public function getId(): ?int
     {
@@ -54,7 +63,7 @@ class Item
         return $this;
     }
 
-    public function getQuantity(): ?int
+    public function getQuantity(): int
     {
         return $this->quantity;
     }
@@ -66,7 +75,7 @@ class Item
         return $this;
     }
 
-    public function getUnit(): ?string
+    public function getUnit(): string
     {
         return $this->unit;
     }

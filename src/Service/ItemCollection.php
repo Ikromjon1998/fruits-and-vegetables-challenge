@@ -11,7 +11,11 @@ class ItemCollection
     {
     }
 
-    public function add(array $itemData)
+    /**
+     * @param array $itemData
+     * @return Item
+     */
+    public function add(array $itemData): Item
     {
         $item = new Item();
         $item->setName($itemData['name']);
@@ -21,14 +25,22 @@ class ItemCollection
 
         $this->entityManager->persist($item);
         $this->entityManager->flush();
+
+        return $item;
     }
 
-    public function list(string $type): array
+    public function list(string $type, ?string $orderBy): array
     {
-        return $this->entityManager->getRepository(Item::class)->findBy(['type' => $type]);
+        $items = $this->entityManager->getRepository(Item::class)->findBy(['type' => $type], ['name' => $orderBy]);
+
+        return $items;
     }
 
-    public function remove(int $id)
+    /**
+     * @param int $id
+     * @return void
+     */
+    public function remove(int $id): void
     {
         $item = $this->entityManager->getRepository(Item::class)->find($id);
 
@@ -38,12 +50,21 @@ class ItemCollection
         }
     }
 
+    /**
+     * @param string $name
+     * @return array<Item[]>
+     */
     public function search(string $name): array
     {
         return $this->entityManager->getRepository(Item::class)->findBy(['name' => $name]);
     }
 
-    public function update(int $id, array $itemData)
+    /**
+     * @param int $id
+     * @param array $itemData
+     * @return Item
+     */
+    public function update(int $id, array $itemData): Item
     {
         $item = $this->entityManager->getRepository(Item::class)->find($id);
 
@@ -54,6 +75,22 @@ class ItemCollection
             $item->setUnit('g');
 
             $this->entityManager->flush();
+        }
+
+        return $item;
+    }
+
+    /**
+     * @param int $id
+     * @retunr void
+     * @throws \Exception
+     */
+    public function toValidateId(int $id): void
+    {
+        $item = $this->entityManager->getRepository(Item::class)->find($id);
+
+        if (!$item) {
+            throw new \Exception('Item not found');
         }
     }
 }
