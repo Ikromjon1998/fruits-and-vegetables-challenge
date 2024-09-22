@@ -29,6 +29,11 @@ or
 ## When you are finished
 * Please upload your code to a public git repository (i.e. GitHub, Gitlab)
 
+## Anyone can test it with following command
+```bash
+composer test
+```
+
 ## 🐳 Docker image
 Optional. Just here if you want to run it isolated.
 
