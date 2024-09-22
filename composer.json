@@ -84,11 +84,14 @@
         "post-update-cmd": [
             "@auto-scripts"
         ],
-        "cx-fixer:fix": [
+        "fixer:run": [
             "./vendor/bin/php-cs-fixer fix"
         ],
-        "cx-fixer:dry-run": [
+        "fixer:dry-run": [
             "./vendor/bin/php-cs-fixer fix --dry-run"
+        ],
+        "test": [
+            "php bin/phpunit"
         ]
     },
     "conflict": {

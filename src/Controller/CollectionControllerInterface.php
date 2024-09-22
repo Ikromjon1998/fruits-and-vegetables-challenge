@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -12,10 +13,7 @@ interface CollectionControllerInterface
     /**
      * @return array<string, mixed>
      */
-    public function store(): array;
+    public function store(Request $request): Response;
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function destroy(int $id): array;
+    public function destroy(int $id): JsonResponse;
 }

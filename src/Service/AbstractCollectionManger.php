@@ -2,8 +2,10 @@
 
 namespace App\Service;
 
+use App\Config\ItemType;
 use App\Config\ItemUnit;
-use App\DTO\ItemData;
+use App\DTO\FruitDTO;
+use App\DTO\VegetableDTO;
 use Doctrine\ORM\EntityManagerInterface;
 
 abstract class AbstractCollectionManger
@@ -14,14 +16,16 @@ abstract class AbstractCollectionManger
 
     abstract protected function getEntityClass(): string;
 
-    public function add(ItemData $itemData): void
+    public function add(FruitDTO $itemData): mixed
     {
         $entityClass = $this->getEntityClass();
         $item = new $entityClass();
         $item->setName($itemData->name);
-        $item->setWeight($itemData->unit === ItemUnit::KG->value ? $itemData->quantity * 1000 : $itemData->quantity);
+        $item->setWeight($itemData->weight);
         $this->em->persist($item);
         $this->em->flush();
+
+        return $item;
     }
 
     public function remove(int $id): void
@@ -71,13 +75,21 @@ abstract class AbstractCollectionManger
 
         foreach ($items as $item) {
             if ($item['type'] === $entityClass::TYPE) {
-                $itemToAdd = new ItemData();
+                $itemToAdd = ItemType::FRUIT->value === $entityClass::TYPE ? new FruitDTO() : new VegetableDTO();
                 $itemToAdd->name = $item['name'];
-                $itemToAdd->type = $entityClass::TYPE;
-                $itemToAdd->quantity = $item['quantity'];
-                $itemToAdd->unit = $item['unit'];
+                $itemToAdd->weight = $item['unit'] === ItemUnit::KG->value ? $item['quantity'] * 1000 : $item['quantity'];
                 $this->add($itemToAdd);
             }
+        }
+    }
+
+    public function validateId(int $id): void
+    {
+        $entityClass = $this->getEntityClass();
+        $item = $this->em->getRepository($entityClass)->find($id);
+
+        if (!$item) {
+            throw new \InvalidArgumentException("Item with id {$id} not found");
         }
     }
 }

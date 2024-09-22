@@ -2,7 +2,9 @@
 
 namespace App\Helpers;
 
+use App\DTO\FruitDTO;
 use App\DTO\ItemData;
+use App\DTO\VegetableDTO;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,5 +45,27 @@ class ItemHelpers
     public function createErrorResponse(string $message, int $statusCode): JsonResponse
     {
         return new JsonResponse(['error' => $message], $statusCode);
+    }
+
+    public function createFruitDTOFromRequest(Request $request): FruitDTO
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $fruitDTO = new FruitDTO();
+        $fruitDTO->name = $data['name'];
+        $fruitDTO->weight = $data['weight'];
+
+        return $fruitDTO;
+    }
+
+    public function createVegetableDTOFromRequest(Request $request): VegetableDTO
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $vegetableDTO = new VegetableDTO();
+        $vegetableDTO->name = $data['name'];
+        $vegetableDTO->weight = $data['weight'];
+
+        return $vegetableDTO;
     }
 }
